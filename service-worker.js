@@ -1,4 +1,4 @@
-const CACHE_NAME='teacher-workbench-2026-11-03-v4';
+const CACHE_NAME='teacher-workbench-2026-11-04-v5';
 const APP_SHELL=['./index.html','./manifest.webmanifest','./icons/icon-180.png','./icons/icon-192.png','./icons/icon-512.png','./icons/favicon.png'];
 
 self.addEventListener('install',event=>{
