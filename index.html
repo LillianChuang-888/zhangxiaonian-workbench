@@ -2,7 +2,8 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
 <title>张小年的工作台 · 云同步版</title>
 <meta name="theme-color" content="#7BAE7F">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -53,8 +54,8 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{--green:#7BAE7F;--green-dark:#5E8E62;--bg:#F5F7F5;--card:#fff;--text:#333;--gray:#E0E5E0;--red:#E86A6A;--orange:#E8A25A;--yellow:#FFF3C4}
-body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);padding-bottom:20px}
-.topbar{background:var(--green);color:#fff;padding:12px 16px;position:sticky;top:0;z-index:100}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);padding-bottom:calc(20px + env(safe-area-inset-bottom));overscroll-behavior-y:contain}
+.topbar{background:var(--green);color:#fff;padding:calc(12px + env(safe-area-inset-top)) 16px 12px;position:sticky;top:0;z-index:100}
 .topbar .row{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
 .topbar .app-title{font-size:18px;font-weight:700}
 .topbar select{background:#fff;color:var(--text);border:none;border-radius:8px;padding:6px 10px;font-size:15px;max-width:160px}
@@ -131,7 +132,7 @@ th{background:#F0F4F0;font-weight:500}
 .record-item .record-info{flex:1}
 .record-item .record-info p{margin-bottom:2px}
 .record-item .record-info .record-date{color:#999;font-size:10px}
-.install-banner{position:fixed;bottom:0;left:0;right:0;background:var(--green);color:#fff;padding:12px 16px;z-index:300;display:none;font-size:14px;align-items:center}
+.install-banner{position:fixed;bottom:0;left:0;right:0;background:var(--green);color:#fff;padding:12px 16px calc(12px + env(safe-area-inset-bottom));z-index:300;display:none;font-size:14px;align-items:center}
 .install-banner .install-btn{background:#fff;color:var(--green);padding:8px 16px;border-radius:8px;border:none;font-size:13px;cursor:pointer;margin-left:10px}
 .install-banner .close-btn{background:none;border:none;color:#fff;font-size:18px;cursor:pointer;margin-left:8px}
 .storage-alert{display:none;margin:10px 16px 0;padding:10px 12px;border-radius:10px;font-size:12px;line-height:1.55;position:relative;padding-right:34px}
@@ -323,6 +324,12 @@ th{background:#F0F4F0;font-weight:500}
     <div id="taskTypeList"></div>
     <div style="display:flex;gap:4px;margin-top:8px"><input type="text" id="newTaskName" placeholder="任务名称" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px"><input type="number" id="newTaskPoints" placeholder="默认加分" style="width:90px;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px"><button class="btn btn-sm" onclick="addTaskType()">添加</button></div>
   </div>
+  <div class="card">
+    <h3>📱 安装到手机</h3>
+    <div id="installAppStatus" class="stat-box"><p>正在检查安装状态...</p></div>
+    <button class="btn" style="width:100%" onclick="showInstallGuide()">查看安装方法</button>
+    <p class="tip-text">安装后从桌面图标启动，可全屏使用并保留登录状态。</p>
+  </div>
   <div class="card" id="cloudSyncCard">
     <h3>☁️ 云同步</h3>
     <div id="cloudSyncPanel"><p class="empty-tip">正在检查云同步...</p></div>
@@ -384,6 +391,15 @@ th{background:#F0F4F0;font-weight:500}
   </div>
 </div>
 
+<div class="modal" id="installGuideModal">
+  <div class="modal-box">
+    <h3>安装到手机</h3>
+    <div id="installGuideContent" style="font-size:13px;line-height:1.8;color:#555"></div>
+    <button class="btn" id="installGuideAction" style="width:100%;margin-top:12px" onclick="triggerAppInstall()">一键安装</button>
+    <button class="btn btn-gray" style="width:100%;margin-top:8px" onclick="closeAllModals()">关闭</button>
+  </div>
+</div>
+
 <div class="modal" id="cloudHistoryModal">
   <div class="modal-box">
     <h3>云端历史版本</h3>
@@ -417,6 +433,7 @@ const LEGACY_EXPORT_KEY='export_records';
 const CLOUD_CONFIG={url:'https://owdtxtkykaeglpjrvsia.supabase.co',publishableKey:'sb_publishable_7N5D7am1cM1GrQzjCYqyvw_bBv5gCSM'};
 const CLOUD_META_KEY='teacher_workbench_cloud_meta_v1';
 const CLOUD_DEVICE_KEY='teacher_workbench_device_v1';
+const CLOUD_EMAIL_KEY='teacher_workbench_cloud_email_v1';
 const CLOUD_HISTORY_LIMIT=30;
 const WORKBENCH_ARRAYS=['classes','scenes','hwTypes','prizes','taskTypes','attendance','evaluations','homework','homeworkGroups','exams','scores','points','exchanges','taskRecords'];
 
@@ -682,6 +699,7 @@ function initializeStorageFeatures(){
   if(startupWarnings.length)setTimeout(function(){alert(startupWarnings.join('\n\n'))},120);
   registerWorkbenchServiceWorker();
   initializeCloudSync();
+  initializeMobileAppUi();
 }
 function registerWorkbenchServiceWorker(){
   const isLocal=['localhost','127.0.0.1'].includes(location.hostname);
@@ -754,8 +772,9 @@ function renderCloudPanel(){
     panel.innerHTML=html;return;
   }
   if(!cloudUser){
-    html='<p style="font-size:12px;color:#777;margin-bottom:10px">登录后可在手机和电脑之间同步。注册和登录都使用邮箱。</p>'+
-      '<input type="email" id="cloudEmail" placeholder="邮箱" autocomplete="username" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-bottom:8px">'+
+    const rememberedEmail=(()=>{try{return localStorage.getItem(CLOUD_EMAIL_KEY)||''}catch(e){return ''}})();
+    html='<p style="font-size:12px;color:#777;margin-bottom:10px">登录后可在手机和电脑之间同步。本设备会保持登录，除非主动退出或清除网站数据。</p>'+
+      '<input type="email" id="cloudEmail" value="'+cloudEsc(rememberedEmail)+'" placeholder="邮箱" autocomplete="username" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-bottom:8px">'+
       '<input type="password" id="cloudPassword" placeholder="密码（至少 6 位）" autocomplete="current-password" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-bottom:8px">'+
       '<div class="export-actions"><button class="btn" onclick="cloudSignIn()">登录</button><button class="btn btn-gray" onclick="cloudSignUp()">注册账号</button></div>'+
       '<p class="tip-text">首次部署需先在 Supabase 运行初始化 SQL。<a href="https://supabase.com/dashboard/project/owdtxtkykaeglpjrvsia/sql/new" target="_blank" rel="noopener">打开 SQL Editor</a> · <a href="./supabase_setup.sql" target="_blank">查看脚本</a></p>';
@@ -782,7 +801,7 @@ function initializeCloudSync(){
   }
   try{
     cloudClient=window.supabase.createClient(CLOUD_CONFIG.url,CLOUD_CONFIG.publishableKey,{
-      auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
+      auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'teacher_workbench_auth_v1'}
     });
     window.addEventListener('online',()=>{renderCloudPanel();scheduleCloudSync(500)});
     window.addEventListener('offline',()=>{cloudLastError='';renderCloudPanel()});
@@ -815,6 +834,7 @@ async function cloudSignIn(){
   const email=(document.getElementById('cloudEmail')||{}).value||'';
   const password=(document.getElementById('cloudPassword')||{}).value||'';
   if(!email.trim()||!password)return showCloudMessage('请输入邮箱和密码。','error');
+  try{localStorage.setItem(CLOUD_EMAIL_KEY,email.trim())}catch(e){}
   showCloudMessage('正在登录...');
   const result=await cloudClient.auth.signInWithPassword({email:email.trim(),password:password});
   if(result.error)showCloudMessage(friendlyCloudError(result.error),'error');
@@ -825,6 +845,7 @@ async function cloudSignUp(){
   const password=(document.getElementById('cloudPassword')||{}).value||'';
   if(!email.trim())return showCloudMessage('请输入邮箱。','error');
   if(password.length<6)return showCloudMessage('密码至少需要 6 位。','error');
+  try{localStorage.setItem(CLOUD_EMAIL_KEY,email.trim())}catch(e){}
   showCloudMessage('正在注册...');
   const redirect=location.protocol.startsWith('http')?location.origin+location.pathname:undefined;
   const result=await cloudClient.auth.signUp({email:email.trim(),password:password,options:redirect?{emailRedirectTo:redirect}:undefined});
@@ -1011,10 +1032,94 @@ function restoreCloudVersion(id){
   alert('历史版本已恢复到本机，并开始上传到云端。');
 }
 
-window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredPrompt=e;document.getElementById('installBanner').style.display='flex'});
-document.getElementById('installBtn').addEventListener('click',function(){if(deferredPrompt){deferredPrompt.prompt();deferredPrompt.userChoice.then(function(){deferredPrompt=null;closeInstallBanner()})}else{closeInstallBanner();alert('请使用浏览器菜单中的"添加到主屏幕"功能')}});
-function closeInstallBanner(){document.getElementById('installBanner').style.display='none'}
-document.addEventListener('click',function(e){if(e.target===document.body||e.target.closest('.page')||e.target.closest('.topbar')){closeInstallBanner()}});
+function isAppStandalone(){return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true}
+function isIosDevice(){return /iphone|ipad|ipod/i.test(navigator.userAgent)}
+function isAndroidDevice(){return /android/i.test(navigator.userAgent)}
+function updateInstallUi(){
+  const box=document.getElementById('installAppStatus');
+  if(box){
+    if(isAppStandalone())box.innerHTML='<p class="storage-ok">已安装，当前正作为手机应用运行。</p><p class="tip-text">桌面图标启动、本地保存和云同步登录会继续保留。</p>';
+    else if(isIosDevice())box.innerHTML='<p class="storage-warn">尚未安装</p><p class="tip-text">iPhone/iPad 请用 Safari 打开，点击分享按钮，再选择“添加到主屏幕”。</p>';
+    else box.innerHTML='<p class="storage-warn">尚未安装</p><p class="tip-text">Android 请在 Chrome/Edge 菜单中点击“安装应用”或“添加到主屏幕”。</p>';
+  }
+  const banner=document.getElementById('installBanner');
+  if(banner&&isIosDevice()&&!isAppStandalone()&&!localStorage.getItem('workbench_install_hint_dismissed_v1')){
+    banner.querySelector('span').textContent='📲 iPhone：分享 → 添加到主屏幕';
+    banner.querySelector('#installBtn').textContent='查看方法';
+    banner.style.display='flex';
+  }
+}
+function showInstallGuide(){
+  const content=document.getElementById('installGuideContent');
+  const action=document.getElementById('installGuideAction');
+  if(isAppStandalone()){
+    content.innerHTML='<p class="storage-ok">当前已经作为手机应用运行。</p><p>以后请直接从桌面图标打开，不要每次重新访问网页。</p>';
+    action.style.display='none';
+  }else if(isIosDevice()){
+    content.innerHTML='<p><b>iPhone / iPad 必须使用 Safari：</b></p><ol style="padding-left:20px"><li>点击 Safari 底部分享按钮。</li><li>向下找到“添加到主屏幕”。</li><li>确认名称为“工作台”，点击“添加”。</li></ol><p class="tip-text">微信内置浏览器不能安装。</p>';
+    action.textContent='我知道了';action.onclick=function(){closeAllModals()};action.style.display='block';
+  }else if(isAndroidDevice()){
+    content.innerHTML='<p><b>Android 安装：</b></p><ol style="padding-left:20px"><li>使用 Chrome 或 Edge 打开本页。</li><li>点击右上角菜单。</li><li>选择“安装应用”或“添加到主屏幕”。</li></ol>';
+    action.textContent=deferredPrompt?'一键安装':'我知道了';action.onclick=deferredPrompt?triggerAppInstall:function(){closeAllModals()};action.style.display='block';
+  }else{
+    content.innerHTML='<p>请在手机浏览器中打开本页并添加到主屏幕。</p>';
+    action.style.display='none';
+  }
+  document.getElementById('overlay').classList.add('active');
+  document.getElementById('installGuideModal').classList.add('active');
+}
+async function triggerAppInstall(){
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    try{await deferredPrompt.userChoice}catch(e){}
+    deferredPrompt=null;closeInstallBanner();closeAllModals();updateInstallUi();return;
+  }
+  if(isIosDevice())return showInstallGuide();
+  alert('请使用浏览器菜单中的“安装应用”或“添加到主屏幕”。');
+}
+function showInstallBanner(){
+  if(isAppStandalone())return;
+  const banner=document.getElementById('installBanner');
+  if(!banner)return;
+  if(!deferredPrompt){
+    banner.querySelector('span').textContent=isIosDevice()?'📲 iPhone：分享 → 添加到主屏幕':'📲 在浏览器菜单中添加到主屏幕';
+    banner.querySelector('#installBtn').textContent=isIosDevice()?'查看方法':'安装方法';
+  }
+  banner.style.display='flex';
+}
+function closeInstallBanner(){
+  const banner=document.getElementById('installBanner');
+  if(banner)banner.style.display='none';
+  try{localStorage.setItem('workbench_install_hint_dismissed_v1','1')}catch(e){}
+}
+window.addEventListener('beforeinstallprompt',function(e){
+  e.preventDefault();deferredPrompt=e;
+  const banner=document.getElementById('installBanner');
+  if(banner){banner.querySelector('span').textContent='📲 安装到手机，像 App 一样使用';banner.querySelector('#installBtn').textContent='立即安装'}
+  showInstallBanner();updateInstallUi();
+});
+window.addEventListener('appinstalled',function(){deferredPrompt=null;closeInstallBanner();updateInstallUi()});
+document.getElementById('installBtn').addEventListener('click',triggerAppInstall);
+function initializeMobileAppUi(){
+  updateInstallUi();
+  setTimeout(function(){if(!isAppStandalone()&&!deferredPrompt&&!localStorage.getItem('workbench_install_hint_dismissed_v1'))showInstallBanner()},2500);
+  document.addEventListener('visibilitychange',function(){
+    if(document.hidden||!cloudClient||!cloudUser)return;
+    if(navigator.onLine){
+      cloudClient.auth.getSession().then(function(result){
+        if(result.data&&result.data.session)handleCloudSession(result.data.session,'RESUME');
+        scheduleCloudSync(600);
+      }).catch(function(){});
+    }
+  });
+  window.addEventListener('pageshow',function(event){if(event.persisted){updateInstallUi();if(cloudUser&&navigator.onLine)scheduleCloudSync(600)}});
+}
+function applyLaunchPage(){
+  try{
+    const page=new URLSearchParams(location.search).get('page');
+    if(['attendance','evaluation','homework','score','points','settings'].includes(page))switchPage(page);
+  }catch(e){}
+}
 
 function getClass(){return data.classes.find(c=>c.id===currentClass)||data.classes[0]||null}
 function switchClass(){currentClass=document.getElementById('classSelect').value;if(!currentClass&&data.classes.length>0)currentClass=data.classes[0].id;if(!currentClass)return;document.getElementById('classSelect').value=currentClass;renderAll()}
@@ -1304,6 +1409,7 @@ function closeAllModals(){document.getElementById('overlay').classList.remove('a
 function initDateInputs(){const today=getToday();document.getElementById('attDate').value=today;document.getElementById('evalDate').value=today;document.getElementById('hwDate').value=today}
 initDateInputs();
 renderAll();
+applyLaunchPage();
 initializeStorageFeatures();
 </script>
 </body>
