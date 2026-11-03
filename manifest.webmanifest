@@ -2,7 +2,7 @@
   "id": "./",
   "name": "张小年的工作台",
   "short_name": "工作台",
-  "description": "本地优先的教师班级事务工作台，支持离线使用和 JSON 数据备份。",
+  "description": "本地优先、可离线安装的教师班级事务工作台，支持长期登录和云同步。",
   "lang": "zh-CN",
   "start_url": "./",
   "scope": "./",
@@ -26,6 +26,45 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "categories": [
+    "education",
+    "productivity"
+  ],
+  "shortcuts": [
+    {
+      "name": "考勤",
+      "short_name": "考勤",
+      "url": "./?page=attendance",
+      "icons": [
+        {
+          "src": "./icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "作业练习",
+      "short_name": "作业",
+      "url": "./?page=homework",
+      "icons": [
+        {
+          "src": "./icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "成绩管理",
+      "short_name": "成绩",
+      "url": "./?page=score",
+      "icons": [
+        {
+          "src": "./icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }
