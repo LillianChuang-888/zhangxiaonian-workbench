@@ -826,7 +826,8 @@ async function cloudSignUp(){
   if(!email.trim())return showCloudMessage('请输入邮箱。','error');
   if(password.length<6)return showCloudMessage('密码至少需要 6 位。','error');
   showCloudMessage('正在注册...');
-  const result=await cloudClient.auth.signUp({email:email.trim(),password:password});
+  const redirect=location.protocol.startsWith('http')?location.origin+location.pathname:undefined;
+  const result=await cloudClient.auth.signUp({email:email.trim(),password:password,options:redirect?{emailRedirectTo:redirect}:undefined});
   if(result.error){showCloudMessage(friendlyCloudError(result.error),'error');return}
   if(result.data&&result.data.session)showCloudMessage('注册成功，正在建立云端数据。');
   else showCloudMessage('注册成功。请到邮箱点击确认链接，然后回到这里登录。');
